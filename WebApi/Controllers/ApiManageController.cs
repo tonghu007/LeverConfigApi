@@ -127,7 +127,7 @@ namespace WebApi.Controllers
             }
         }
 
-        //0 = String,1 = Integer,2 = Long,3 = Double,4 = Float,5 = Decimal,6 = Boolean,7 = Date,8 = DateTime,9 = Key/Value,10 = List,11 = File
+        //0 = String,1 = Integer,2 = Long,3 = Double,4 = Float,5 = Decimal,6 = Boolean,7 = Date,8 = DateTime,9=Ulong,10 = Key/Value,11= List,12 = File
         private object SetDefaultValue(int paramType)
         {
             switch (paramType)
