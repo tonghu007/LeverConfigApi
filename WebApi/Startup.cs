@@ -57,8 +57,6 @@ namespace WebApi
             services.AddSingleton<DynamicApiDal>();
             services.AddSingleton<IConfigBll, ConfigBll>();
             services.AddSingleton<ConfigDal>();
-            services.AddSingleton<ILeverXinBll, LeverXinBll>();
-            services.AddSingleton<LeverXinDal>();
             services.AddSingleton<ComponentBll, ComponentBll>();
             services.AddSingleton<ComponentDal>();
 
