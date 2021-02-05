@@ -1,0 +1,40 @@
+﻿@using WebApi.Components
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"] - 后台</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta http-equiv="Access-Control-Allow-Origin" content="*">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="icon" href="~/images/favicon.ico">
+    <link rel="stylesheet" href="~/lib/layui-v2.5.5/css/layui.css" media="all">
+    <link rel="stylesheet" href="~/css/layuimini.css" media="all">
+    <link rel="stylesheet" href="~/lib/font-awesome-4.7.0/css/font-awesome.min.css" media="all">
+    <!--[if lt IE 9]>
+    <script src="js/html5.min.js"></script>
+    <script src="js/respond.min.js"></script>
+    <![endif]-->
+    <style id="layuimini-bg-color">
+    </style>
+</head>
+<body class="layui-layout-body layuimini-all">
+    <div class="layui-layout layui-layout-admin">
+        <header>
+            @await Component.InvokeAsync(typeof(LayoutHeaderViewComponent), new { count = 9 })
+        </header>
+            @RenderBody()
+    </div>
+    <footer>
+        @await Component.InvokeAsync(typeof(LayoutFooterViewComponent), new { count = 99 })
+    </footer>
+    <script src="~/lib/layui-v2.5.5/layui.js?v=1.0.4" charset="utf-8"></script>
+    <script src="~/js/lay-config.js?v=1.0.4" charset="utf-8"></script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

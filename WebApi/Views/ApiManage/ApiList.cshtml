@@ -1,0 +1,479 @@
+﻿
+@{
+    ViewData["Title"] = "Api接口配置";
+    Layout = "~/Views/Shared/_IframeLayout.cshtml";
+}
+<div class="layuimini-container">
+    <div class="layuimini-main">
+        <fieldset class="table-search-fieldset">
+            <legend>搜索信息</legend>
+            <div style="margin: 10px 10px 10px 10px">
+                <form class="layui-form layui-form-pane" action="" lay-filter="Search">
+                    <div class="layui-form-item">
+                        <div class="layui-inline">
+                            <label class="layui-form-label">接口分组</label>
+                            <div class="layui-input-inline">
+                                <!--Post,Get,Put,Delete-->
+                                <select name="GroupId" id="GroupId" class="layui-select"></select>
+                            </div>
+                        </div>
+                        <div class="layui-inline">
+                            <label class="layui-form-label">接口名称</label>
+                            <div class="layui-input-inline">
+                                <input type="text" name="ApiName" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-inline">
+                            <button type="submit" id="searchBtn" class="layui-btn layui-btn-primary" lay-submit lay-filter="data-search-btn"><i class="layui-icon"></i> 搜 索</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </fieldset>
+        <div class="layui-row">
+            <div class="layui-col-md7">
+                <script type="text/html" id="apiToolbar">
+                    <div class="layui-btn-container">
+                        <button class="layui-btn layui-btn-sm api-data-add-btn"> 添加接口 </button>
+                        <button class="layui-btn layui-btn-sm layui-btn-danger api-data-delete-btn"> 删除接口 </button>
+                    </div>
+                </script>
+                <table class="layui-hide" id="apiTableId" lay-filter="apiTableFilter"></table>
+                <script type="text/html" id="apiTableBar">
+                    <a class="layui-btn layui-btn-xs data-count-edit" lay-event="edit">编辑</a>
+                    <a class="layui-btn layui-btn-xs layui-btn-danger data-count-delete" lay-event="delete">删除</a>
+                </script>
+            </div>
+            <div class="layui-col-md5">
+                <script type="text/html" id="paramsToolbar">
+                    <div class="layui-btn-container">
+                        <button class="layui-btn layui-btn-sm params-data-add-btn"> 添加参数 </button>
+                        <button class="layui-btn layui-btn-sm layui-btn-danger params-data-delete-btn"> 删除参数 </button>
+                    </div>
+                </script>
+                <table class="layui-hide" id="paramsTableId" lay-filter="paramsTableFilter"></table>
+                <script type="text/html" id="paramsTableBar">
+                    <a class="layui-btn layui-btn-xs data-count-edit" lay-event="edit">编辑</a>
+                    <a class="layui-btn layui-btn-xs layui-btn-danger data-count-delete" lay-event="delete">删除</a>
+                </script>
+            </div>
+        </div>
+
+    </div>
+</div>
+@section Scripts{
+    <script>
+        layui.use(['form', 'table'], function () {
+            var $ = layui.jquery,
+                form = layui.form,
+                table = layui.table,
+                layuimini = layui.layuimini;
+            //接口table渲染
+            table.render({
+                elem: '#apiTableId',
+                url: '/api/config/',
+                parseData: function (res) {
+                    if (res.code == 1) {
+                        top.location.href = "/Login/SignIn";
+                        return;
+                    } else if (res.code != 1 && res.code != 0) {
+                        layer.alert('错误：' + res.message);
+                        return;
+                    }
+                    return {
+                        "code": res.code, //解析接口状态
+                        "msg": res.message, //解析提示文本
+                        "count": res.data.TotalRows, //解析数据长度
+                        "data": res.data.List //解析数据列表
+                    };
+                },
+                request: {
+                    pageName: 'pageIndex', //页码的参数名称，默认：page
+                    limitName: 'pageSize' //每页数据量的参数名，默认：limit
+                },
+                response: {
+                    statusName: 'code', //规定数据状态的字段名称，默认：code
+                    statusCode: 0
+                },
+                toolbar: '#apiToolbar',
+                defaultToolbar: ['filter', 'exports', 'print', {
+                    title: '提示',
+                    layEvent: 'LAYTABLE_TIPS',
+                    icon: 'layui-icon-tips'
+                }],
+                cols: [[
+                    { type: "checkbox", width: 50, fixed: "left" },
+                    { field: 'ApiIdCode', width: 130, title: '接口编码', sort: true },
+                    { field: 'ApiName', width: 120, title: '接口名', sort: true },
+                    { field: 'ApiKindText', title: '接口类型', width: 100, sort: true },
+                    { field: 'CodeKindText', width: 100, title: '脚本类型', sort: true },
+                    { field: 'StatusText', width: 80, title: '状态', sort: true },
+                    { field: 'Description', minWidth: 100, title: '描述' },
+                    { title: '操作', minWidth: 130, templet: '#apiTableBar', fixed: "right", align: "center" }
+                ]],
+                limits: [10, 15, 20, 25, 50, 100],
+                limit: 15,
+                page: true,
+                height: window.innerHeight - 20 - $($("#apiTableId").get(0).parentNode).offset().top,
+                done: function (res, curr, count) {
+                    addToobarBtnEvent();
+                    //默认选中点击第一行
+                    $(".layui-table-view[lay-id='apiTableId'] .layui-table-main tr[data-index=0]").click()
+                }
+            });
+            // 监听接口搜索操作
+            form.on('submit(data-search-btn)', function (data) {
+                var result = JSON.stringify(data.field);
+                //执行搜索重载
+                reloadTable(result);
+                return false;
+            });
+            //监听接口表格复选框选择
+            table.on('checkbox(apiTableFilter)', function (obj) {
+                console.log(obj)
+            });
+            //接口table工具条
+            table.on('tool(apiTableFilter)', function (obj) {
+                var data = obj.data;
+                if (obj.event === 'edit') {
+                    var index = layer.open({
+                        title: '修改接口',
+                        type: 2,
+                        shade: 0.2,
+                        maxmin: true,
+                        shadeClose: true,
+                        area: ['80%', '80%'],
+                        content: '/ApiManage/ApiEdit?ApiIdCode=' + data.ApiIdCode,
+                    });
+                    /*
+                    $(window).on("resize", function () {
+                        layer.full(index);
+                    });
+                    */
+                    return false;
+                } else if (obj.event === 'delete') {
+                    layer.confirm('确定删除接口？', function (index) {
+                        $.ajax({
+                            url: "/api/Config/Delete/" + data.ApiIdCode,
+                            data: null,
+                            type: "Get",
+                            dataType: "json",
+                            success: function (res) {
+                                if (res.code == 0) {
+                                    obj.del();
+                                    layer.close(index);
+                                } else if (res.code == 1) {
+                                    top.location.href = "/Login/SignIn";
+                                } else {
+                                    layer.alert('错误：'+res.message);
+                                }
+
+                            },
+                            error: function (res) {
+                                layer.alert('错误：' + res);
+                            }
+                        });
+                    });
+                }
+            });
+            //监听行单击事件（双击事件为：rowDouble）
+            table.on('row(apiTableFilter)', function (obj) {
+                var data = obj.data;
+                buildParamsTable(data.ApiIdCode);
+                //标注选中样式
+                obj.tr.addClass('layui-table-click').siblings().removeClass('layui-table-click');
+            });
+
+            //接口table刷新
+            function reloadTable(searchKey) {
+                table.reload('apiTableId', {
+                    page: {
+                        curr: 1
+                    },
+                    where: {
+                        searchKey: searchKey
+                    },
+                    done: function (res, curr, count) {
+                        addToobarBtnEvent();
+                        //默认选中点击第一行
+                        $(".layui-table-view[lay-id='apiTableId'] .layui-table-body tr[data-index=0]").click()
+                    }
+                }, 'data');
+            }
+           
+            //接口工具栏事件添加
+            function addToobarBtnEvent() {
+                // 监听添加操作
+                $(".api-data-add-btn").on("click", function () {
+                    var index = layer.open({
+                        title: '添加接口',
+                        type: 2,
+                        shade: 0.2,
+                        maxmin: true,
+                        shadeClose: true,
+                        area: ['80%', '80%'],
+                        content: '/ApiManage/ApiEdit',
+                    });
+                    /*
+                    $(window).on("resize", function () {
+                        layer.full(index);
+                    });
+                    */
+                    return false;
+                });
+
+                // 监听删除操作
+                $(".api-data-delete-btn").on("click", function () {
+                    var checkStatus = table.checkStatus('apiTableId');
+                    var data = checkStatus.data;
+                    if (data.length == 0) {
+                        layer.alert("请选择要删除的接口");
+                        return;
+                    }
+                    layer.confirm('确定删除接口？', function (index) {
+                        $.ajax({
+                            url: "/api/Config/ApiBatchDelete/",
+                            data: JSON.stringify(data),
+                            type: "Post",
+                            dataType: "json",
+                            contentType: 'application/json',
+                            success: function (res) {
+                                if (res.code == 0) {
+                                    reloadTable("{}");
+                                    layer.close(index);
+                                } else if (res.code == 1) {
+                                    top.location.href = "/Login/SignIn";
+                                } else {
+                                    layer.alert('错误：'+res.message);
+                                }
+
+                            },
+                            error: function (res) {
+                                layer.alert('错误：' + res);
+                            }
+                        });
+                    });
+                });
+            }
+
+            function buildParamsTable(apiIdCode) {
+                //参数table渲染
+                table.render({
+                    elem: '#paramsTableId',
+                    url: '/api/config/params/' + apiIdCode,
+                    parseData: function (res) {
+                        if (res.code == 1) {
+                            top.location.href = "/Login/SignIn";
+                            return;
+                        } else if (res.code != 1 && res.code != 0) {
+                            layer.alert('错误：' + res.message);
+                            return;
+                        }
+                        return {
+                            "code": res.code, //解析接口状态
+                            "msg": res.message, //解析提示文本
+                            "count": res.data.TotalRows, //解析数据长度
+                            "data": res.data.List //解析数据列表
+                        };
+                    },
+                    request: {
+                        pageName: 'pageIndex', //页码的参数名称，默认：page
+                        limitName: 'pageSize' //每页数据量的参数名，默认：limit
+                    },
+                    response: {
+                        statusName: 'code', //规定数据状态的字段名称，默认：code
+                        statusCode: 0
+                    },
+                    toolbar: '#paramsToolbar',
+                    defaultToolbar: ['filter', 'exports', 'print', {
+                        title: '提示',
+                        layEvent: 'LAYTABLE_TIPS',
+                        icon: 'layui-icon-tips'
+                    }],
+                    cols: [[
+                        { type: "checkbox", width: 50, fixed: "left" },
+                        { field: 'ParamName', width: 100, title: '参数名', sort: true },
+                        { field: 'ParamCode', width: 100, title: '参数代码', sort: true },
+                        { field: 'ParamTypeText', width: 120, title: '参数类型', sort: true },
+                        { field: 'Description', minWidth: 80, title: '描述' },
+                        { title: '操作', minWidth: 130, templet: '#paramsTableBar', fixed: "right", align: "center" }
+                    ]],
+                    limits: [10, 15, 20, 25, 50, 100],
+                    limit: 15,
+                    page: true,
+                    height: window.innerHeight - 20 - $($("#paramsTableId").get(0).parentNode).offset().top,
+                    done: function (res, curr, count) {
+                        addParamToobarBtnEvent();
+                    }
+                });
+
+                //监听接口表格复选框选择
+                table.on('checkbox(paramsTableFilter)', function (obj) {
+                    console.log(obj)
+                });
+                //接口table工具条
+                table.on('tool(paramsTableFilter)', function (obj) {
+                    var data = obj.data;
+                    if (obj.event === 'edit') {
+                        if (data.IsFixed == 1) {
+                            layer.alert(data.ParamName +" 固定参数不能修改");
+                            return;
+                        }
+                        var index = layer.open({
+                            title: '修改参数',
+                            type: 2,
+                            shade: 0.2,
+                            maxmin: true,
+                            shadeClose: true,
+                            area: ['80%', '80%'],
+                            content: '/ApiManage/EditParameter?ApiIdCode=' + data.ApiIdCode + "&ParamId=" + data.ParamId,
+                        });
+                        /*
+                        $(window).on("resize", function () {
+                            layer.full(index);
+                        });
+                        */
+                        return false;
+                    } else if (obj.event === 'delete') {
+                        if (data.IsFixed == 1) {
+                            layer.alert(data.ParamName +" 为固定参数不能修改");
+                            return;
+                        }
+                        layer.confirm('确定删除参数？', function (index) {
+                            $.ajax({
+                                url: "/api/Config/ParamDelete/" + data.ParamId,
+                                data: null,
+                                type: "Get",
+                                dataType: "json",
+                                success: function (res) {
+                                    if (res.code == 0) {
+                                        obj.del();
+                                        layer.close(index);
+                                    } else if (res.code == 1) {
+                                        top.location.href = "/Login/SignIn";
+                                    } else {
+                                        layer.alert('错误：'+res.message);
+                                    }
+
+                                },
+                                error: function (res) {
+                                    layer.alert('错误：' + res);
+                                }
+                            });
+                        });
+                    }
+                });
+
+                //接口table刷新
+                function reloadParamTable() {
+                    table.reload('paramsTableId', {
+                        page: {
+                            curr: 1
+                        },
+                        done: function (res, curr, count) {
+                            addParamToobarBtnEvent();
+                        }
+                    }, 'data');
+                }
+
+                //监听消息刷新参数列表
+                window.onmessage = function (event) {
+                    var data = event.data;
+                    if (data == "refreshParamsList")
+                        reloadParamTable();
+                    if (data == "refreshApiList")
+                        $("#searchBtn").click();
+                };
+
+                //接口工具栏事件添加
+                function addParamToobarBtnEvent() {
+                    // 监听添加操作
+                    $(".params-data-add-btn").on("click", function () {
+                        debugger
+                        var index = layer.open({
+                            title: '添加参数',
+                            type: 2,
+                            shade: 0.2,
+                            maxmin: true,
+                            shadeClose: true,
+                            area: ['80%', '80%'],
+                            content: '/ApiManage/EditParameter?ApiIdCode=' + apiIdCode,
+                        });
+                        /*
+                        $(window).on("resize", function () {
+                            layer.full(index);
+                        });
+                        */
+                        return false;
+                    });
+
+                    // 监听删除操作
+                    $(".params-data-delete-btn").on("click", function () {
+                        var checkStatus = table.checkStatus('paramsTableId');
+                        var data = checkStatus.data;
+                        if (data.length == 0) {
+                            layer.alert("请选择要删除的参数");
+                            return;
+                        }
+                        for (var i = 0; i < data.length; i++) {
+                            var row = data[i];
+                            if (row.IsFixed == 1) {
+                                layer.alert(row.ParamName + " 为固定参数不能修改");
+                                return;
+                            }
+                        }
+                        layer.confirm('确定删除参数？', function (index) {
+                            $.ajax({
+                                url: "/api/Config/ParamBatchDelete/",
+                                data: JSON.stringify(data),
+                                type: "Post",
+                                dataType: "json",
+                                contentType: 'application/json',
+                                success: function (res) {
+                                    if (res.code == 0) {
+                                        reloadParamTable();
+                                        layer.close(index);
+                                    } else if (res.code == 1) {
+                                        top.location.href = "/Login/SignIn";
+                                    } else {
+                                        layer.alert('错误：'+res.message);
+                                    }
+
+                                },
+                                error: function (res) {
+                                    layer.alert('错误：' + res);
+                                }
+                            });
+                        });
+                    });
+                }
+            }
+           
+            $.ajax({
+                url: "/api/Config/AllGroup",
+                data: null,
+                type: "Get",
+                dataType: "json",
+                success: function (res) {
+                    if (res.code == 0) {
+                        var select = $("#GroupId").get(0);
+                        select.options.add(new Option("全部", ""));
+                        for (var i = 0; i < res.data.length; i++) {
+                            var group = res.data[i];
+                            select.options.add(new Option(group["GroupName"], group["GroupId"]));
+                        }
+                        form.render('select', "Search");
+                    } else if (res.code == 1) {
+                        top.location.href = "/Login/SignIn";
+                    } else {
+                        layer.alert('错误：'+res.message);
+                    }
+                },
+                error: function (res) {
+                    layer.alert('错误：' + res);
+                }
+            });
+        });
+
+    </script>
+}

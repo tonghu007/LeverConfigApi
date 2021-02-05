@@ -1,0 +1,312 @@
+﻿
+@{
+    ViewData["Title"] = "ApiTest";
+    Layout = "~/Views/Shared/_IframeLayout.cshtml";
+    var apiConfig = (IDictionary<string, object>)ViewData["apiConfig"];
+    var apiUrl = (Context.Request.Scheme + "://") + Context.Request.Host.Value + Context.Request.PathBase + apiConfig["ApiUrl"];
+    var isAuth = (int)apiConfig["IsAuth"];
+}
+<div class="layuimini-container">
+    <div class="layuimini-main">
+        <fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+            <legend>接口</legend>
+        </fieldset>
+        <table class="layui-table">
+            <colgroup>
+                <col width="150">
+                <col>
+            </colgroup>
+            <tbody>
+                <tr>
+                    <td>接口名</td>
+                    <td>@apiConfig["ApiName"]</td>
+                </tr>
+                <tr>
+                    <td>接口地址</td>
+                    <td><span style="color:#0A14FB;">@apiUrl</span></td>
+                </tr>
+                <tr>
+                    <td>token认证信息</td>
+                    <td><input type="text" name="Token" id="Token"  placeholder="输入token认证信息" value="Bearer " class="layui-input"></td>
+                </tr>
+            </tbody>
+        </table>
+        <fieldset class="layui-elem-field layui-field-title" style="margin-top: 10px;">
+            <legend>参数</legend>
+        </fieldset>
+        <textarea name="apiParams" id="apiParams" placeholder="接口参数" rows="6" class="layui-textarea">@ViewData["json"]</textarea>
+        <button type="button" class="layui-btn" id="TestBtn" style="margin: 10px 10px;">测试</button>
+        <div class="layui-code layui-box layui-code-view">
+            <h3 class="layui-code-h3">测试结果</h3>
+            <div name="apiParams" id="apiTestResult">
+                <div class="layui-none">请执行测试</div>
+            </div>
+        </div>
+    </div>
+</div>
+@section Styles{
+    <style>
+        .ObjectBrace {
+            color: #00AA00;
+            font-weight: bold;
+        }
+
+        .ArrayBrace {
+            color: #0033FF;
+            font-weight: bold;
+        }
+
+        .PropertyName {
+            color: #992C11;
+            font-weight: bold;
+        }
+
+        .String {
+            color: #007777;
+        }
+
+        .Number {
+            color: #AA00AA;
+        }
+
+        .Boolean {
+            color: #0000FF;
+        }
+
+        .Function {
+            color: #AA6633;
+            text-decoration: italic;
+        }
+
+        .Null {
+            color: #0000FF;
+        }
+
+        .Comma {
+            color: #000000;
+            font-weight: bold;
+        }
+
+        PRE.CodeContainer {
+            margin-top: 0px;
+            margin-bottom: 0px;
+        }
+
+        .layui-code-h3 {
+            padding: 0 10px;
+            height: 32px;
+            line-height: 32px;
+            border-bottom: 1px solid #e2e2e2;
+        }
+
+        .layui-code-h3, .layui-code-view {
+            position: relative;
+            font-size: 12px;
+        }
+
+        .layui-code-view {
+            display: block;
+            margin: 10px 0;
+            padding: 0;
+            border: 1px solid #e2e2e2;
+            border-left-width: 6px;
+            background-color: #F2F2F2;
+            color: #333;
+            font-family: Courier New;
+        }
+
+        .layui-code-h3, .layui-code-view {
+            position: relative;
+            font-size: 12px;
+        }
+    </style>
+}
+@section Scripts{
+    <script>
+        window.TAB = "  ";
+        function IsArray(obj) {
+            return obj &&
+                typeof obj === 'object' &&
+                typeof obj.length === 'number' &&
+                !(obj.propertyIsEnumerable('length'));
+        }
+
+        function ProcessObject(obj, indent, addComma, isArray, isPropertyContent) {
+            var html = "";
+            var comma = (addComma) ? "<span class='Comma'>,</span> " : "";
+            var type = typeof obj;
+
+            if (IsArray(obj)) {
+                if (obj.length == 0) {
+                    html += GetRow(indent, "<span class='ArrayBrace'>[ ]</span>" + comma, isPropertyContent);
+                } else {
+                    html += GetRow(indent, "<span class='ArrayBrace'>[</span>", isPropertyContent);
+                    for (var i = 0; i < obj.length; i++) {
+                        html += ProcessObject(obj[i], indent + 1, i < (obj.length - 1), true, false);
+                    }
+                    html += GetRow(indent, "<span class='ArrayBrace'>]</span>" + comma);
+                }
+            } else if (type == 'object' && obj == null) {
+                html += FormatLiteral("null", "", comma, indent, isArray, "Null");
+            } else if (type == 'object') {
+                var numProps = 0;
+                for (var prop in obj) numProps++;
+                if (numProps == 0) {
+                    html += GetRow(indent, "<span class='ObjectBrace'>{ }</span>" + comma, isPropertyContent);
+                } else {
+                    html += GetRow(indent, "<span class='ObjectBrace'>{</span>", isPropertyContent);
+                    var j = 0;
+                    for (var prop in obj) {
+                        html += GetRow(indent + 1, "<span class='PropertyName'>" + prop + "</span>: " + ProcessObject(obj[prop], indent + 1, ++j < numProps, false, true));
+                    }
+                    html += GetRow(indent, "<span class='ObjectBrace'>}</span>" + comma);
+                }
+            } else if (type == 'number') {
+                html += FormatLiteral(obj, "", comma, indent, isArray, "Number");
+            } else if (type == 'boolean') {
+                html += FormatLiteral(obj, "", comma, indent, isArray, "Boolean");
+            } else if (type == 'function') {
+                obj = FormatFunction(indent, obj);
+                html += FormatLiteral(obj, "", comma, indent, isArray, "Function");
+            } else if (type == 'undefined') {
+                html += FormatLiteral("undefined", "", comma, indent, isArray, "Null");
+            } else {
+                html += FormatLiteral(obj, "\"", comma, indent, isArray, "String");
+            }
+            return html;
+        }
+
+        function FormatLiteral(literal, quote, comma, indent, isArray, style) {
+            if (typeof literal == 'string')
+                literal = literal.split("<").join("&lt;").split(">").join("&gt;");
+            var str = "<span class='" + style + "'>" + quote + literal + quote + comma + "</span>";
+            if (isArray) str = GetRow(indent, str);
+            return str;
+        }
+
+        function FormatFunction(indent, obj) {
+            var tabs = "";
+            for (var i = 0; i < indent; i++) tabs += window.TAB;
+            var funcStrArray = obj.toString().split("\n");
+            var str = "";
+            for (var i = 0; i < funcStrArray.length; i++) {
+                str += ((i == 0) ? "" : tabs) + funcStrArray[i] + "\n";
+            }
+            return str;
+        }
+
+        function GetRow(indent, data, isPropertyContent) {
+            var tabs = "";
+            for (var i = 0; i < indent && !isPropertyContent; i++) tabs += window.TAB;
+            if (data != null && data.length > 0 && data.charAt(data.length - 1) != "\n")
+                data = data + "\n";
+            return tabs + data;
+        }
+
+        function formatJson(json) {
+            var html = "";
+            try {
+                var obj;
+                if (typeof json == "object") {
+                    obj = [json];
+                }
+                else {
+                    if (json == "")
+                        json = "\"\"";
+                    obj = eval("[" + json + "]");
+                }
+                html = ProcessObject(obj[0], 0, false, false, false);
+                html = "<PRE class='CodeContainer'>" + html + "</PRE>";
+            } catch (e) {
+                html = json;
+            }
+            return html;
+        }
+    </script>
+    <script>
+        layui.use(['jquery', 'form'], function () {
+            var layer = layui.layer;
+            var $ = layui.$;
+            var method = "@apiConfig["Method"]";
+            var postFrom = "@apiConfig["PostFrom"]";
+            $("#Token").val(localStorage.getItem("$token") ? localStorage.getItem("$token"):"Bearer ");
+            $("#TestBtn").on("click", function () {
+                var params = $("#apiParams").val();
+                if (method.toLowerCase() != "post" && method.toLowerCase() != "put" && postFrom.trim() != "") {
+                    alert("接口参数设置有误，请检查参数提交类型和请求方法是否正确");
+                    return;
+                }
+                var token = $("#Token").val();
+                if (token.trim() != "") {
+                    localStorage.setItem("$token", token);
+                }
+                if (method.toLowerCase() == "get") {
+                    //Get请求
+                    $.ajax({
+                        url: "@apiUrl",
+                        data: JSON.parse(params),
+                        headers:
+                        {
+                            Authorization: @isAuth== 1 ? token : null
+                        },
+                        type: method,
+                        dataType: "json",
+                        success: function (res) {
+                            $("#apiTestResult").html(formatJson(res));
+                        },
+                        error: function (res) {
+                            layer.alert('错误：' + res);
+                        }
+                    });
+                } else if (postFrom.toLowerCase() == "frombody") {
+                    //Json提交
+                    $.ajax({
+                        url: "@apiUrl",
+                        data: params,
+                        headers:
+                        {
+                            Authorization: @isAuth== 1 ? token : null
+                        },
+                        type: method,
+                        dataType: "json",
+                        contentType: 'application/json',
+                        success: function (res) {
+                            $("#apiTestResult").html(formatJson(JSON.stringify(res)));
+                        },
+                        error: function (res) {
+                            layer.alert('错误：' + res);
+                        }
+                    });
+                } else {
+                    //Form提交
+                    var data = JSON.parse(params);
+                    var formData = new FormData();
+                    if (data != null) {
+                        for (var o in data) {
+                            formData[o] = data[o];
+                        }
+                    }
+                    $.ajax({
+                        url: "@apiUrl",
+                        data: formData,
+                        headers:
+                        {
+                            Authorization: @isAuth== 1 ? token : null
+                        },
+                        type: method,
+                        processData: false,
+                        contentType: false,
+                        success: function (res) {
+                            $("#apiTestResult").html(formatJson(JSON.stringify(res)));
+                        },
+                        error: function (res) {
+                            layer.alert('错误：' + res);
+                        }
+                    });
+                }
+
+            });
+        });
+
+    </script>
+}

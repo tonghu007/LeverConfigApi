@@ -1,0 +1,49 @@
+{
+  "clearInfo": {
+    "clearUrl": "api/clear.json"
+  },
+  "homeInfo": {
+    "title": "首页",
+    "icon": "fa fa-home",
+    "href": "/ApiManage/Index"
+  },
+  "logoInfo": {
+    "title": "动态API管理",
+    "image": "images/logo.png",
+    "href": ""
+  },
+  "menuInfo": {
+    "dynamicApi": {
+      "title": "动态Api管理",
+      "icon": "fa fa-cog",
+      "child": [
+        {
+          "title": "动态配置Api",
+          "href": "",
+          "icon": "fa fa-home",
+          "target": "_self",
+          "child": [
+            {
+              "title": "Api分组配置",
+              "href": "/ApiManage/ApiGroup",
+              "icon": "fa fa-pencil",
+              "target": "_self"
+            },
+            {
+              "title": "Api配置",
+              "href": "/ApiManage/ApiList",
+              "icon": "fa fa-gears",
+              "target": "_self"
+            },
+            {
+              "title": "对外Api查询",
+              "href": "ApiManage/ApiQuery",
+              "icon": "fa fa-book",
+              "target": "_self"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

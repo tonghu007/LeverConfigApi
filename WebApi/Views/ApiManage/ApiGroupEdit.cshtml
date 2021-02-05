@@ -1,0 +1,233 @@
+﻿
+@{
+    ViewData["Title"] = "ApiGroupEdit";
+    Layout = "~/Views/Shared/_IframeLayout.cshtml";
+}
+
+    <div class="layui-form layuimini-form" id="GroupEdit" lay-filter="GroupEdit">
+        <div class="layui-form-item">
+            <label class="layui-form-label required">分组名</label>
+            <div class="layui-input-block">
+                <input type="text" name="GroupName" lay-verify="required" lay-reqtext="分组名不能为空" placeholder="请输入分组名" value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label required">状态</label>
+            <div class="layui-input-block">
+                <!--0=公共接口；1=对内接口-->
+                <input type="radio" name="Status" value="0" title="停用" checked="">
+                <input type="radio" name="Status" value="1" title="启用">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label required">Token发行人</label>
+            <div class="layui-input-block">
+                <input type="text" name="Issuer" lay-verify="required" lay-reqtext="Token发行人不能为空" placeholder="Token发行人" value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label required">订阅者</label>
+            <div class="layui-input-block">
+                <input type="text" name="Audience" lay-verify="required" lay-reqtext="订阅者不能为空" placeholder="订阅者" value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label required">Token密钥</label>
+            <div class="layui-input-block">
+                <input type="password" name="SecurityKey" id="SecurityKey" lay-verify="tokenKeyVerify" lay-reqtext="Token密钥不能为空" placeholder="Token密钥,大于16个字符" value="" disabled="disabled" class="layui-input">
+                <tip>双击后可修改</tip>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label required">有效期(min)</label>
+            <div class="layui-input-block">
+                <input type="number" name="Expires" placeholder="Token有效期（分钟）" lay-reqtext="Token有效期不能为空" lay-verify="required" value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label required">到期缓冲期(min)</label>
+            <div class="layui-input-block">
+                <input type="number" name="ClockSkew" placeholder="Token到期缓冲时间（分钟）" lay-reqtext="Token到期缓不能为空" lay-verify="required" value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">扩展程序集</label>
+            <div class="layui-input-block">
+                <input type="text" name="SystemPramsPluginAssemblyPath" placeholder="系统参数扩展程序集" value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">扩展程序类名</label>
+            <div class="layui-input-block">
+                <input type="text" name="SystemPramsPluginClassName" placeholder="系统参数扩展程序类名" value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">数据库连接Key</label>
+            <div class="layui-input-block">
+                <input type="text" name="DataBaseKey" placeholder="数据库连接Key" lay-verify="required" lay-reqtext="数据库连接Key不能为空" value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">备注</label>
+            <div class="layui-input-block">
+                <textarea name="Remark" class="layui-textarea" placeholder="备注" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn" lay-submit lay-filter="saveBtn">确认保存</button>
+            </div>
+        </div>
+        <input id="GroupId" name="GroupId" type="hidden" value="@ViewData["GroupId"]" />
+        <input id="AesIv" name="AesIv" type="hidden" />
+        <input id="AesKey" name="AesKey" type="hidden" />
+        <input id="IsModify" name="IsModify" type="hidden" value="0" />
+    </div>
+@section Scripts{
+    <script src="~/js/jsrsasign-all-min.js"></script>
+
+    <script>
+        var groupId = "@ViewData["GroupId"]";
+        var securityKey;
+        layui.use(['form'], function () {
+            var form = layui.form,
+                layer = layui.layer,
+                $ = layui.$;
+            $(document).on("dblclick","#SecurityKey", function () {
+                $(this).val("");
+                $(this).attr("type", "text");
+                $(this).removeAttr("disabled") ;
+            });
+            $(document).on("blur", "#SecurityKey", function () {
+                var value = $(this).val();
+                if (value.trim() == "") {
+                    $(this).val(securityKey);
+                    $("#IsModify").val("0");
+                } else {
+                    var aesKey = randomAesKey(false, 16);
+                    var aesIv = randomAesKey(false, 16);
+                    var aesEncryptValue = aesEncrypt(value, aesKey, aesIv);
+                    $("#AesKey").val(rsaEncrypt(aesKey));
+                    $("#AesIv").val(rsaEncrypt(aesIv));
+                    $(this).val(aesEncryptValue);
+                    $("#IsModify").val("1");
+                }
+                
+                $(this).attr("type", "password");
+                $(this).attr("disabled", "disabled");
+                
+            });
+            $(document).on("keyup", "#SecurityKey", function () {
+                $("#IsModify").val("1");
+            });
+            //监听提交
+            form.on('submit(saveBtn)', function (data) {
+                $.ajax({
+                    url: "/api/Config/SaveGroup",
+                    data: JSON.stringify(data.field),
+                    type: "Post",
+                    dataType: "json",
+                    contentType: 'application/json',
+                    success: function (res) {
+                        if (res.code == 0) {
+                            //var table = parent.layui.table;
+                            //table.reload("apiTableId", {});
+                            window.parent.location.reload();//修改成功后刷新父界面
+                            var iframeIndex = parent.layer.getFrameIndex(window.name);
+                            parent.layer.close(iframeIndex);
+                        } else {
+                            layer.alert('错误：' + res.message);
+                        }
+                    },
+                    error: function (res) {
+                        layer.alert('错误：'+ res);
+                    }
+                });
+
+                return false;
+            });
+            if (groupId != "0") {
+                $.ajax({
+                    url: "/api/Config/Group/" + groupId,
+                    data: null,
+                    type: "Get",
+                    dataType: "json",
+                    success: function (res) {
+                        if (res.code == 0) {
+                            securityKey = res.data["SecurityKey"];
+                            form.val("GroupEdit", res.data);
+                        } else if (res.code == 1) {
+                            top.location.href = "/Login/SignIn";
+                        } else {
+                            layer.alert('错误：'+res.message);
+                        }
+                    },
+                    error: function (res) {
+                        layer.alert('错误：' + res);
+                    }
+                });
+            }
+            form.verify({
+                  tokenKeyVerify: function(value){ //自定义lay-verify的昵称，value：表单的值
+                    if(value.length<16)
+                        return "Token密钥不能少于16个字符";
+                  }
+            });
+        });
+
+        function randomAesKey(randomFlag, min, max) {
+          var str = [],
+            range = min,
+            arr = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+              'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+              'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+              'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+              'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
+          if (randomFlag) {
+            range = Math.round(Math.random() * (max - min)) + min;// 任意长度
+          }
+          for (let i = 0; i < range; i++) {
+              pos = Math.round(Math.random() * (arr.length - 1));
+              str.push(arr[pos])
+            }
+            return str.join("");
+        }
+
+        function rsaEncrypt(str){
+            var publicKey = localStorage.getItem("$publicKey");
+            var publicKey = KEYUTIL.getKey(publicKey);
+            var rsaEncryptValue = KJUR.crypto.Cipher.encrypt(str, publicKey);
+            return urlEncode(hextob64(rsaEncryptValue));
+        }
+
+        function aesEncrypt(word, key,iv) {
+            var key = CryptoJS.enc.Utf8.parse(key);
+            var iv = CryptoJS.enc.Utf8.parse(iv);
+            var srcs = CryptoJS.enc.Utf8.parse(word);
+            var encrypted = CryptoJS.AES.encrypt(srcs, key, {
+                iv: iv,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+            var result = urlEncode(encrypted.toString());
+            return result;
+        }
+
+        function urlEncode(str){
+            str = str.replace(/\+/g, "-");
+            str = str.replace(/\//g, "_");
+            return str;
+        }
+
+        function urlDecode(str){
+            str = str.replace(/-/g, "+");
+            str = str.replace(/_/g, "/");
+            return str;
+        }
+    </script>
+}
+
+
+

@@ -1,0 +1,187 @@
+﻿
+@{
+    ViewData["Title"] = "EditParameter";
+    Layout = "~/Views/Shared/_IframeLayout.cshtml";
+}
+
+<div class="layui-form layuimini-form" id="EditParameter" lay-filter="EditParameter">
+    <div class="layui-form-item">
+        <label class="layui-form-label required">参数名</label>
+        <div class="layui-input-block">
+            <input type="text" name="ParamName" lay-verify="required" lay-reqtext="参数名不能为空" placeholder="请输入参数名" value="" class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">参数代码</label>
+        <div class="layui-input-block">
+            <input type="text" name="ParamCode" id="ParamCode" placeholder="请输入参数代码" value="" class="layui-input">
+            <tip>参数类型为List时可以不填（如直接提交一个List）</tip>
+        </div>
+
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label required">参数类型</label>
+        <div class="layui-input-block">
+            <!--Post,Get,Put,Delete-->
+            <select name="ParamType" class="layui-select">
+                <option value="0">String</option>
+                <option value="1">Integer</option>
+                <option value="2">Long</option>
+                <option value="3">Double</option>
+                <option value="4">Float</option>
+                <option value="5">Decimal</option>
+                <option value="6">Boolean</option>
+                <option value="7">Date</option>
+                <option value="8">DateTime</option>
+                <option value="9">ULong</option>
+                <option value="10">Key/Value</option>
+                <option value="11">List</option>
+                <option value="12">File</option>
+            </select>
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label required">是否必填</label>
+        <div class="layui-input-block">
+            <!--0=公共接口；1=对内接口-->
+            <input type="radio" name="IsRequire" value="1" title="必填" checked="">
+            <input type="radio" name="IsRequire" value="0" title="非必填">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label required">参数类型</label>
+        <div class="layui-input-block">
+            <!--0=请求参数；1=系统参数；2=Id值-->
+            <input type="radio" name="ParamsKind" value="0" title="请求参数" checked="">
+            <input type="radio" name="ParamsKind" value="1" title="系统参数">
+            <input type="radio" name="ParamsKind" value="2" title="Id值">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">正则表达式</label>
+        <div class="layui-input-block">
+            <textarea name="CheckRule" placeholder="参数合法性验证正则表达式" rows="2" class="layui-textarea"></textarea>
+            <tip>不合法提示错误提示</tip>
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">错误提示</label>
+        <div class="layui-input-block">
+            <input type="text" name="RuleError" placeholder="错误提示内容" value="" class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">参数验证脚本</label>
+        <div class="layui-input-block">
+            <div>
+                <span style="color:#0A14FB;font-weight:bold">function</span> func(<span id="paramCodeName">参数代码</span>)
+            </div>
+            <textarea name="CheckScript" id="CheckScript" placeholder="参数合法性验证的脚本" rows="6" class="layui-textarea">
+  local pass=true
+  local err="验证错误"
+  --逻辑代码
+  return pass,err
+            </textarea>
+            <div style="color:#0A14FB;font-weight:bold">end</div>
+            <tip>验证不合法脚本中给出提示</tip>
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">参数说明</label>
+        <div class="layui-input-block">
+            <textarea name="Description" class="layui-textarea" placeholder="参数说明" rows="3"></textarea>
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <div class="layui-input-block">
+            <button class="layui-btn" lay-submit lay-filter="saveBtn">确认保存</button>
+        </div>
+    </div>
+    <input id="ApiIdCode" name="ApiIdCode" type="hidden" value="@ViewData["ApiIdCode"]" />
+    <input id="ParamId" name="ParamId" type="hidden" value="@ViewData["ParamId"]" />
+</div>
+
+@section Links{
+    <link rel="stylesheet" href="~/lib/codemirror/lib/codemirror.css">
+    <link rel="stylesheet" href="~/lib/codemirror/theme/neat.css">
+}
+@section Scripts{
+    <script src="~/lib/codemirror/lib/codemirror.js"></script>
+    <script src="~/lib/codemirror/addon/edit/matchbrackets.js"></script>
+    <script src="~/lib/codemirror/mode/lua.js"></script>
+    <script>
+        var checkScriptEditor = CodeMirror.fromTextArea(document.getElementById("CheckScript"), {
+            matchBrackets: true,
+            theme: "neat"
+        });
+    </script>
+    <script>
+        var paramId ="@ViewData["ParamId"]";
+
+        layui.use(['form'], function () {
+            var form = layui.form,
+                layer = layui.layer,
+                $ = layui.$;
+
+            //监听提交
+            form.on('submit(saveBtn)', function (data) {
+                data.field["CheckScript"] = checkScriptEditor.getValue();
+                $.ajax({
+                    url: "/api/Config/SaveParam",
+                    data: JSON.stringify(data.field),
+                    type: "Post",
+                    dataType: "json",
+                    contentType: 'application/json',
+                    success: function (res) {
+                        if (res.code == 0) {
+                            //var table = parent.layui.table;
+                            //table.reload("apiTableId", {});
+                            //window.parent.location.reload();//修改成功后刷新父界面
+                            window.parent.postMessage("refreshParamsList", "*");
+                            var iframeIndex = parent.layer.getFrameIndex(window.name);
+                            parent.layer.close(iframeIndex);
+                        } else if (res.code == 1) {
+                            top.location.href = "/Login/SignIn";
+                        } else {
+                            layer.alert('错误：'+res.message);
+                        }
+                    },
+                    error: function (res) {
+                        layer.alert('错误：'+ res);
+                    }
+                });
+
+                return false;
+            });
+            if (paramId != "0") {
+                $.ajax({
+                    url: "/api/Config/ParamRow/" + paramId,
+                    data: null,
+                    type: "Get",
+                    dataType: "json",
+                    success: function (res) {
+                        if (res.code == 0) {
+                            form.val("EditParameter", res.data);
+                            $("#paramCodeName").html(res.data.ParamCode.trim() == "" ? "参数代码" : res.data.ParamCode.trim());
+                            checkScriptEditor.setValue(res.data["CheckScript"]);
+                        } else if (res.code == 1) {
+                            top.location.href = "/Login/SignIn";
+                        } else {
+                            layer.alert('错误：'+res.message);
+                        }
+                    },
+                    error: function (res) {
+                        layer.alert('错误：'+ res);
+                    }
+                });
+            }
+
+            $("#ParamCode").on("input",function () {
+                $("#paramCodeName").html(this.value.trim() == "" ? "参数代码" : this.value.trim());
+            });
+        });
+    </script>
+}
+
+
+

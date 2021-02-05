@@ -1,0 +1,230 @@
+﻿
+@{
+    ViewData["Title"] = "ApiGroup";
+    Layout = "~/Views/Shared/_IframeLayout.cshtml";
+}
+<div class="layuimini-container">
+    <div class="layuimini-main">
+        <fieldset class="table-search-fieldset">
+            <legend>搜索信息</legend>
+            <div style="margin: 10px 10px 10px 10px">
+                <form class="layui-form layui-form-pane" action="">
+                    <div class="layui-form-item">
+                        <div class="layui-inline">
+                            <label class="layui-form-label">分组名称</label>
+                            <div class="layui-input-inline">
+                                <input type="text" name="GroupName" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-inline">
+                            <button type="submit" class="layui-btn layui-btn-primary" lay-submit lay-filter="data-search-btn"><i class="layui-icon"></i> 搜 索</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </fieldset>
+        <div class="layui-row">
+            <div class="layui-col-md12">
+                <script type="text/html" id="groupToolbar">
+                    <div class="layui-btn-container">
+                        <button class="layui-btn layui-btn-sm group-data-add-btn"> 添加分组 </button>
+                        <button class="layui-btn layui-btn-sm layui-btn-danger group-data-delete-btn"> 删除分组 </button>
+                    </div>
+                </script>
+                <table class="layui-hide" id="groupTableId" lay-filter="groupTableFilter"></table>
+                <script type="text/html" id="groupTableBar">
+                    <a class="layui-btn layui-btn-xs data-count-edit" lay-event="edit">编辑</a>
+                    <a class="layui-btn layui-btn-xs layui-btn-danger data-count-delete" lay-event="delete">删除</a>
+                </script>
+            </div>
+        </div>
+
+    </div>
+</div>
+@section Scripts{
+    <script>
+        layui.use(['form', 'table'], function () {
+            var $ = layui.jquery,
+                form = layui.form,
+                table = layui.table,
+                layuimini = layui.layuimini;
+            //接口table渲染
+            table.render({
+                elem: '#groupTableId',
+                url: '/api/config/Group',
+                parseData: function (res) {
+                    if (res.code == 1) {
+                        top.location.href = "/Login/SignIn";
+                        return;
+                    } else if (res.code != 1 && res.code != 0) {
+                        layer.alert('错误：' + res.message);
+                        return;
+                    }
+                    return {
+                        "code": res.code, //解析接口状态
+                        "msg": res.message, //解析提示文本
+                        "count": res.data.TotalRows, //解析数据长度
+                        "data": res.data.List //解析数据列表
+                    };
+                },
+                request: {
+                    pageName: 'pageIndex', //页码的参数名称，默认：page
+                    limitName: 'pageSize' //每页数据量的参数名，默认：limit
+                },
+                response: {
+                    statusName: 'code', //规定数据状态的字段名称，默认：code
+                    statusCode: 0
+                },
+                toolbar: '#groupToolbar',
+                defaultToolbar: ['filter', 'exports', 'print', {
+                    title: '提示',
+                    layEvent: 'LAYTABLE_TIPS',
+                    icon: 'layui-icon-tips'
+                }],
+                cols: [[
+                    { type: "checkbox", width: 50, fixed: "left" },
+                    { field: 'GroupName', width: 150, title: '接口分组', sort: true },
+                    { field: 'StatusText', width: 80, title: '状态', sort: true },
+                    { field: 'Remark', minWidth: 200, title: '备注' },
+                    { title: '操作', minWidth: 130, templet: '#groupTableBar', fixed: "right", align: "center" }
+                ]],
+                limits: [10, 15, 20, 25, 50, 100],
+                limit: 15,
+                page: true,
+                height: window.innerHeight - 20 - $($("#groupTableId").get(0).parentNode).offset().top,
+                done: function (res, curr, count) {
+                    addToobarBtnEvent();
+                    //默认选中点击第一行
+                    $(".layui-table-view[lay-id='groupTableId'] .layui-table-main tr[data-index=0]").click()
+                }
+            });
+            // 监听接口搜索操作
+            form.on('submit(data-search-btn)', function (data) {
+                var result = JSON.stringify(data.field);
+                //执行搜索重载
+                reloadTable(result);
+                return false;
+            });
+            //监听接口表格复选框选择
+            table.on('checkbox(groupTableFilter)', function (obj) {
+                console.log(obj)
+            });
+            //接口table工具条
+            table.on('tool(groupTableFilter)', function (obj) {
+                var data = obj.data;
+                if (obj.event === 'edit') {
+                    var index = layer.open({
+                        title: '修改分组',
+                        type: 2,
+                        shade: 0.2,
+                        maxmin: true,
+                        shadeClose: true,
+                        area: ['80%', '80%'],
+                        content: '/ApiManage/ApiGroupEdit?GroupId=' + data.GroupId,
+                    });
+                    /*
+                    $(window).on("resize", function () {
+                        layer.full(index);
+                    });
+                    */
+                    return false;
+                } else if (obj.event === 'delete') {
+                    layer.confirm('确定删除分组？', function (index) {
+                        $.ajax({
+                            url: "/api/Config/GroupDelete/" + data.GroupId,
+                            data: null,
+                            type: "Get",
+                            dataType: "json",
+                            success: function (res) {
+                                if (res.code == 0) {
+                                    obj.del();
+                                    layer.close(index);
+                                } else if (res.code == 1) {
+                                    top.location.href = "/Login/SignIn";
+                                } else {
+                                    layer.alert('错误：' + res.message);
+                                }
+                            },
+                            error: function (res) {
+                                layer.alert('错误：' + res);
+                            }
+                        });
+                    });
+                }
+            });
+
+            //接口table刷新
+            function reloadTable(searchKey) {
+                table.reload('groupTableId', {
+                    page: {
+                        curr: 1
+                    },
+                    where: {
+                        searchKey: searchKey
+                    },
+                    done: function (res, curr, count) {
+                        addToobarBtnEvent();
+                        //默认选中点击第一行
+                        $(".layui-table-view[lay-id='groupTableId'] .layui-table-body tr[data-index=0]").click()
+                    }
+                }, 'data');
+            }
+            //接口工具栏事件添加
+            function addToobarBtnEvent() {
+                // 监听添加操作
+                $(".group-data-add-btn").on("click", function () {
+                    var index = layer.open({
+                        title: '添加接口',
+                        type: 2,
+                        shade: 0.2,
+                        maxmin: true,
+                        shadeClose: true,
+                        area: ['80%', '80%'],
+                        content: '/ApiManage/ApiGroupEdit',
+                    });
+                    /*
+                    $(window).on("resize", function () {
+                        layer.full(index);
+                    });
+                    */
+                    return false;
+                });
+
+                // 监听删除操作
+                $(".group-data-delete-btn").on("click", function () {
+                    var checkStatus = table.checkStatus('groupTableId');
+                    var data = checkStatus.data;
+                    if (data.length == 0) {
+                        layer.alert("请选择要删除的分组");
+                        return;
+                    }
+                    layer.confirm('确定删除分组？', function (index) {
+                        $.ajax({
+                            url: "/api/Config/ApiGroupBatchDelete/",
+                            data: JSON.stringify(data),
+                            type: "Post",
+                            dataType: "json",
+                            contentType: 'application/json',
+                            success: function (res) {
+                                if (res.code == 0) {
+                                    reloadTable("{}");
+                                    layer.close(index);
+                                } else if (res.code == 1) {
+                                    top.location.href = "/Login/SignIn";
+                                } else {
+                                    layer.alert('错误：' + res.message);
+                                }
+
+                            },
+                            error: function (res) {
+                                layer.alert('错误：' + res);
+                            }
+                        });
+                    });
+                });
+            }
+        });
+    </script>
+}
+
+

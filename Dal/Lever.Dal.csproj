@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <!--- ServerGarbageCollection ： 服务器垃圾收集 ：不会让内存无限增长 -->
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <!--- ConcurrentGarbageCollection ： 并发垃圾收集 ：不会让内存无限增长 -->
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Common\Lever.Common.csproj" />
+    <ProjectReference Include="..\Core\Lever.Core.csproj" />
+    <ProjectReference Include="..\DBUtility\Lever.DBUtility.csproj" />
+    <ProjectReference Include="..\Extensions\Lever.Extensions.csproj" />
+    <ProjectReference Include="..\Plugins\Lever.Plugins.csproj" />
+  </ItemGroup>
+
+</Project>
